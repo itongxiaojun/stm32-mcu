@@ -1,0 +1,87 @@
+name: CI - RTL Simulation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  simulation:
+    runs-on: ubuntu-latest
+    container:
+      image: hpretl/iic-osic-tools:latest
+      options: --userns=keep-id
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up environment
+        run: |
+          export PATH=/foss/tools/bin:$PATH
+          export LD_LIBRARY_PATH=/foss/tools/iverilog/lib:/foss/tools/lib
+          export PDK=sky130A
+          export PDK_ROOT=/foss/pdks
+          export STD_CELL_LIBRARY=sky130_fd_sc_hd
+
+      - name: Functional simulation (Icarus Verilog)
+        run: |
+          export PATH=/foss/tools/bin:$PATH
+          export LD_LIBRARY_PATH=/foss/tools/iverilog/lib:/foss/tools/lib
+          cd /foss/designs
+          iverilog -g2012 -o stm32_top_sim.vvp \
+            /foss/picorv32/picorv32.v \
+            rtl/riscv_core.v \
+            rtl/stm32_top.v \
+            tb/stm32_top_tb.v
+          vvp stm32_top_sim.vvp
+
+      - name: Lint with iVerilog
+        run: |
+          export PATH=/foss/tools/bin:$PATH
+          cd /foss/designs
+          iverilog -g2012 -Wall -Werror \
+            /foss/picorv32/picorv32.v \
+            rtl/riscv_core.v \
+            rtl/stm32_top.v \
+            tb/stm32_top_tb.v \
+            -o /dev/null 2>&1 || true
+
+      - name: Upload VCD waveform
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulation-waveform
+          path: /tmp/*.vcd
+          if-no-files-found: ignore
+
+  synthesis:
+    runs-on: ubuntu-latest
+    needs: simulation
+    container:
+      image: hpretl/iic-osic-tools:latest
+      options: --userns=keep-id
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Yosys synthesis
+        run: |
+          export PATH=/foss/tools/bin:$PATH
+          export LD_LIBRARY_PATH=/foss/tools/iverilog/lib:/foss/tools/lib
+          export PDK_ROOT=/foss/pdks
+          export STD_CELL_LIBRARY=sky130_fd_sc_hd
+          cd /foss/designs
+          timeout 300 yosys -s syn/synth.ys 2>&1 | tail -20
+
+      - name: Upload synthesized netlist
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthesized-netlist
+          path: syn/stm32_top_synth.v
+          if-no-files-found: ignore

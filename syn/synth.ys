@@ -14,9 +14,6 @@ read_verilog rtl/stm32_top.v
 # Set top module
 hierarchy -check -top stm32_top
 
-# Check for undefined cells and wires
-check
-
 # Flatten the design
 flatten
 

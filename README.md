@@ -253,8 +253,6 @@ stm32-mcu/
 ├── .gitignore                 # Ignore build artifacts
 ├── .gitmodules                # Git submodule configuration
 ├── rtl/                       # Verilog RTL source files
-│   ├── stm32_top.v            # Top-level module (top)
-│   ├── riscv_core.v           # picorv32 core wrapper
 │   ├── stm32_top.v            # Top-level module
 │   ├── riscv_core.v           # picorv32 RISC-V core wrapper
 │   ├── gpio.v                 # GPIOA controller
@@ -265,7 +263,8 @@ stm32-mcu/
 │   ├── flash_ctrl.v           # Flash memory controller
 │   ├── sram_ctrl.v            # SRAM memory controller
 │   ├── ahb_apb_bridge.v       # AHB to APB bridge
-│   └── ahb_matrix.v           # AHB crossbar
+│   ├── ahb_matrix.v           # AHB crossbar
+│   └── apb_bridge.v           # APB bridge wrapper
 ├── tb/                        # Testbenches
 │   └── stm32_top_tb.v         # Icarus Verilog testbench
 ├── syn/                       # Synthesis scripts
