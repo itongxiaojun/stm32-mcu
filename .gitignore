@@ -1,0 +1,14 @@
+# Build outputs
+syn/*.v
+build/
+sim_*.vvp
+*.vcd
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
+*~

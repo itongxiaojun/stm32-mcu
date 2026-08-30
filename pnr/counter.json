@@ -1,0 +1,11 @@
+{
+    "DESIGN_NAME": "stm32_top",
+    "VERILOG_FILES": "rtl/riscv_core.v rtl/stm32_top.v /foss/picorv32/picorv32.v",
+    "CLOCK_PORT": "clk",
+    "CLOCK_PERIOD": 20,
+    "PNR_SDC_FILE": "pnr/sdc.tcl",
+    "FP_CORE_UTIL": 50,
+    "FP_ASPECT_RATIO": 1.0,
+    "FP_PIN_ORDER_CFG": "pnr/pin_order.cfg",
+    "STD_CELL_LIBRARY": "sky130_fd_sc_hd"
+}
