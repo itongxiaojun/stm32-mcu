@@ -158,6 +158,60 @@ the PDK.
 > `clock_gating_integrated_cell` attributes for the ICG cells. Cell count (747)
 > and all timing/area data are identical, so synthesis results are unaffected.
 
+## Physical implementation (place & route)
+
+[`fes32_pnr.tcl`](fes32_pnr.tcl) drives OpenROAD from the synthesized netlist all
+the way to a routed DEF:
+
+```sh
+PDK_DIR=~/pdk/icsprout55-pdk-v1.10.102 \
+MACRO_DIR=$PWD/syn/sram_macro/ics55_ecos_sram_1024x80_m4 \
+NETLIST=$PWD/syn/build/Fes32SynthTop_synth.v \
+OUT_DIR=$PWD/syn/pnr \
+  openroad -no_init -exit syn/fes32_pnr.tcl
+```
+
+`STAGE=floorplan|place|cts|route` stops early for debugging (default `route`).
+
+Result: `syn/pnr/Fes32SynthTop.def` — 222,832 lines, 14,390 instances, 200 pins,
+14,159 nets (14,077 routed segments), 2 SRAM macros, and **`route_drc.rpt` empty
+(0 DRC violations)**.
+
+### The `_ecos` LEFs are mandatory for routing
+
+The PDK ships two flavours of every LEF. They differ in the routing-layer
+`OFFSET`, and that single value decides whether the design routes at all:
+
+| | `OFFSET` | MET1 tracks | Cell pin `AO222X4H7L/C1` spans x 0.225–0.375 |
+|---|---|---|---|
+| `N551P6M.lef`, `ics55_LLSC_H7CL.lef` | `0 0` | x = 0.2, 0.4, … | no track inside the pin → `DRT-0073 No access point` |
+| **`N551P6M_ecos.lef`, `…_ecos.lef`** | **`0.1 0.1`** | x = 0.1, 0.3, … | **x = 0.3 falls inside the pin** |
+
+With the plain LEFs TritonRoute aborted on dozens of large-drive cells
+(`AO222X4H7L`, `AOI21BX3H7L`, `MUX2X3H7L`, …); with the `_ecos` LEFs it routes
+clean. The `_ecos` tech LEF also carries `CAPACITANCE`/`EDGECAPACITANCE`, so wire
+RC comes from the LEF instead of defaulting to 0.
+
+`syn/fetch_ics55_pdk.sh` downloads both flavours; ECC
+defaults to the `_ecos` ones for the same reason.
+
+### Macro placement
+
+The two SRAM macros are placed by name with `place_macro` and locked, and the
+standard-cell rows under them are removed with `cut_rows`:
+
+- a 2 um sliver left of the macros produces rows the detailed placer cannot
+  legalise into, so they sit flush against the core's left edge;
+- the macros are 370.6 x 155.5 um each and their OBS covers MET1–MET3 over
+  almost the whole footprint (only 0.18 um pin-escape notches) with MET4 as a
+  power-stripe grid, so MET5 is the only layer that crosses them. A 20 um gap
+  between the two leaves a routing channel, and utilization is held at 40%
+  rather than the usual 45–50%.
+
+Note that `$inst setPlacementStatus FIXED` through the OpenDB Tcl API silently
+leaves the status at `NONE`, which makes the placer treat the macros as unplaced
+and skip `cut_rows`. Use the `place_macro` command instead.
+
 ## Note on the netlist
 
 The netlist top is `Fes32SynthTop`, which carries the 2048-word memory
