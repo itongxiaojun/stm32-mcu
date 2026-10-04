@@ -1,8 +1,12 @@
 # Build outputs
 syn/*.v
 build/
-sim_*.vvp
+*.vvp
 *.vcd
+*.fst
+
+# Generated RTL export bundle (derived from designs/ and picorv32/; regenerate on demand)
+export/
 
 # OS files
 .DS_Store

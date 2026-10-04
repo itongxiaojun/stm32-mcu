@@ -1,11 +1,11 @@
 // ========================================================================
-// Stm32Mcu Unit Testbench
-// Tests the Stm32Mcu design without FrameTop.
+// Fes32 Unit Testbench
+// Tests the Fes32 design without FrameTop.
 // ========================================================================
 
 `timescale 1ns/1ps
 
-module Stm32McuTb;
+module Fes32Tb;
 
     logic clock = 1'b0;
     logic reset = 1'b1;
@@ -17,7 +17,7 @@ module Stm32McuTb;
 
     always #(HALF_PERIOD) clock = ~clock;  // 100MHz
 
-    Stm32Mcu #(
+    Fes32 #(
         .IO_WIDTH(66)
     ) dut (
         .clock(clock),
@@ -28,8 +28,8 @@ module Stm32McuTb;
     );
 
     initial begin
-        $dumpfile("/tmp/Stm32McuTb.vcd");
-        $dumpvars(0, Stm32McuTb);
+        $dumpfile("/tmp/Fes32Tb.vcd");
+        $dumpvars(0, Fes32Tb);
 
         // Reset sequence: assert reset for 40ns, then deassert
         #(120);

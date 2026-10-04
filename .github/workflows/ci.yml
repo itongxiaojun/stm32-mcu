@@ -30,21 +30,21 @@ jobs:
         run: |
           export PATH=/foss/tools/bin:$PATH
           export LD_LIBRARY_PATH=/foss/tools/iverilog/lib:/foss/tools/lib
-          iverilog -g2012 -o stm32_mcu_sim.vvp \
+          iverilog -g2012 -o fes32_sim.vvp \
             /foss/picorv32/picorv32.v \
-            designs/stm32-mcu/rtl/riscv_core.v \
-            designs/stm32-mcu/rtl/Stm32Mcu.sv \
-            designs/stm32-mcu/tests/Stm32McuTb.sv
-          vvp stm32_mcu_sim.vvp
+            designs/fes32/rtl/riscv_core.v \
+            designs/fes32/rtl/Fes32.sv \
+            designs/fes32/tests/Fes32Tb.sv
+          vvp fes32_sim.vvp
 
       - name: Lint with iVerilog
         run: |
           export PATH=/foss/tools/bin:$PATH
           iverilog -g2012 -Wall -Werror \
             /foss/picorv32/picorv32.v \
-            designs/stm32-mcu/rtl/riscv_core.v \
-            designs/stm32-mcu/rtl/Stm32Mcu.sv \
-            designs/stm32-mcu/tests/Stm32McuTb.sv \
+            designs/fes32/rtl/riscv_core.v \
+            designs/fes32/rtl/Fes32.sv \
+            designs/fes32/tests/Fes32Tb.sv \
             -o /dev/null 2>&1 || true
 
       - name: Upload VCD waveform
@@ -80,5 +80,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: synthesized-netlist
-          path: syn/stm32_mcu_synth.v
+          path: syn/fes32_synth.v
           if-no-files-found: ignore

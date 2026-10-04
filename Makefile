@@ -1,8 +1,8 @@
 # ========================================================================
-# Makefile for STM32-Compatible MCU (mpc-frame)
+# Makefile for FES32 (STM32-Compatible MCU, mpc-frame)
 # ========================================================================
 
-.PHONY: all sim synth clean sim-unit help
+.PHONY: all sim synth clean validate design-build help
 
 # Tool paths
 IVERILOG ?= iverilog
@@ -11,7 +11,7 @@ YOSYS    ?= yosys
 PYTHON   ?= python3
 
 # Directories
-DESIGN   := designs/stm32-mcu
+DESIGN   := designs/fes32
 RTL      := $(DESIGN)/rtl
 TESTS    := $(DESIGN)/tests
 SYN      := syn
@@ -20,13 +20,13 @@ PNR      := pnr
 # Source files (mpc-frame design package)
 PICORV32 := picorv32/picorv32.v
 RISCV    := $(RTL)/riscv_core.v
-TOP      := $(RTL)/Stm32Mcu.sv
-TESTBENCH:= $(TESTS)/Stm32McuTb.sv
+TOP      := $(RTL)/Fes32.sv
+TESTBENCH:= $(TESTS)/Fes32Tb.sv
 
 # Output files
-SIM_VVP  := stm32_mcu_sim.vvp
-SYN_V    := $(SYN)/stm32_mcu_synth.v
-VCD      := /tmp/Stm32McuTb.vcd
+SIM_VVP  := fes32_sim.vvp
+SYN_V    := $(SYN)/fes32_synth.v
+VCD      := /tmp/Fes32Tb.vcd
 
 # Registry (for frame build)
 MPC_FRAME := ../mpc-frame
@@ -62,7 +62,7 @@ design-build:
 	@echo "=== Building design for FrameTop ==="
 	$(PYTHON) $(MPC_FRAME)/scripts/design_registry.py design-build \
 		--design $(DESIGN)/design.json \
-		--output-dir build/stm32-mcu \
+		--output-dir build/fes32 \
 		--kind unit
 
 # ========================================================================

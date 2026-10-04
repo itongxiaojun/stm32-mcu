@@ -8,17 +8,17 @@
 read_verilog /foss/picorv32/picorv32.v
 
 # Read design sources
-read_verilog designs/stm32-mcu/rtl/riscv_core.v
-read_verilog designs/stm32-mcu/rtl/Stm32Mcu.sv
+read_verilog designs/fes32/rtl/riscv_core.v
+read_verilog designs/fes32/rtl/Fes32.sv
 
 # Set top module
-hierarchy -check -top Stm32Mcu
+hierarchy -check -top Fes32
 
 # Flatten the design
 flatten
 
 # Synthesis
-synth -top Stm32Mcu -flatten
+synth -top Fes32 -flatten
 
 # Technology mapping to sky130
 dfflibmap -liberty /foss/pdks/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
@@ -32,6 +32,6 @@ opt_clean
 stat -liberty /foss/pdks/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
 
 # Write the synthesized netlist
-write_verilog -noattr -nohex syn/stm32_mcu_synth.v
+write_verilog -noattr -nohex syn/fes32_synth.v
 
 echo "=== Synthesis Complete ==="

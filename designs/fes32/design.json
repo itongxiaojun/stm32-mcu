@@ -1,9 +1,9 @@
 {
-  "name": "stm32-mcu",
+  "name": "fes32",
   "id": 1,
-  "module": "Stm32Mcu",
+  "module": "Fes32",
   "sources": [
-    "rtl/Stm32Mcu.sv",
+    "rtl/Fes32.sv",
     "rtl/riscv_core.v"
   ],
   "include_dirs": [],
@@ -15,8 +15,8 @@
     {
       "name": "io",
       "kind": "unit",
-      "top": "Stm32McuTb",
-      "sources": ["tests/Stm32McuTb.sv"]
+      "top": "Fes32Tb",
+      "sources": ["tests/Fes32Tb.sv"]
     }
   ]
 }

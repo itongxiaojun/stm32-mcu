@@ -1,11 +1,11 @@
-# stm32-mcu 接入 mpc-frame 设计文档
+# FES32 接入 mpc-frame 设计文档
 
-## 1. Stm32Mcu 封装设计
+## 1. Fes32 封装设计
 
 ### 1.1 接口定义
 
 ```systemverilog
-module Stm32Mcu #(
+module Fes32 #(
     parameter int IO_WIDTH = 66
 )(
     input  logic        clock,
@@ -281,12 +281,12 @@ assign psram_dq_i = io_in[61:58];
 
 | 文件 | 操作 | 说明 |
 |---|---|---|
-| `rtl/stm32_mcu_frame.sv` | 新增 | Frame 适配封装 |
+| `rtl/fes32_frame.sv` | 新增 | Frame 适配封装 |
 | `rtl/stm32_top.v` | 修改 | 模块化重构 |
 | `rtl/riscv_core.v` | 修改 | NVIC 连接 |
-| `designs/stm32-mcu/design.json` | 新增 | manifest |
-| `designs/stm32-mcu/rtl/Stm32Mcu.sv` | 新增 | 用户设计 RTL |
-| `designs/stm32-mcu/tests/Stm32McuTb.sv` | 新增 | 单元测试 |
-| `designs/stm32-mcu/tests/FrameStm32McuTb.sv` | 新增 | FrameTop 集成测试 |
+| `designs/fes32/design.json` | 新增 | manifest |
+| `designs/fes32/rtl/Fes32.sv` | 新增 | 用户设计 RTL |
+| `designs/fes32/tests/Fes32Tb.sv` | 新增 | 单元测试 |
+| `designs/fes32/tests/FrameFes32Tb.sv` | 新增 | FrameTop 集成测试 |
 | `Makefile` | 修改 | 新增 frame 目标 |
 | `.github/workflows/ci.yml` | 修改 | 新增 frame-check job |

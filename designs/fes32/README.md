@@ -1,4 +1,4 @@
-# stm32-mcu Frame Design
+# FES32 Frame Design
 
 STM32F103 兼容 MCU 的 mpc-frame 用户设计封装。
 
@@ -42,9 +42,9 @@ STM32F103 兼容 MCU 的 mpc-frame 用户设计封装。
 
 ```sh
 # 独立单元测试
-iverilog -g2012 -o Stm32McuTb.vvp \
-  rtl/Stm32Mcu.sv rtl/*.v tests/Stm32McuTb.sv \
-  && vvp Stm32McuTb.vvp
+iverilog -g2012 -o Fes32Tb.vvp \
+  rtl/Fes32.sv rtl/*.v tests/Fes32Tb.sv \
+  && vvp Fes32Tb.vvp
 
 # FrameTop 集成测试
 python3 ../../../../mpc-frame/scripts/design_registry.py design-build \

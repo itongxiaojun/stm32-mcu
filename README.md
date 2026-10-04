@@ -1,4 +1,4 @@
-# STM32-Compatible MCU on IIC-OSIC-TOOLS
+# FES32 — STM32-Compatible MCU on IIC-OSIC-TOOLS
 
 ![CI](https://github.com/redoop/stm32-mcu/workflows/CI/badge.svg)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
@@ -25,6 +25,18 @@ This project implements an STM32F103-compatible microcontroller using open-sourc
 EDA tools. The design targets the [mpc-frame](https://github.com/iic-jku/mpc-frame)
 platform for multi-design chip integration via `FrameTop`.
 
+**Project name: `FES32`** (Faireye Semi 32-bit MCU family). The RTL top module is
+`Fes32` and the design package lives in [`designs/fes32/`](designs/fes32/).
+
+> **Note:** the repository slug is still `stm32-mcu` (pending rename to `fes32`),
+> so the clone URL and CI badge above still point at the old slug. Project, RTL
+> module and design package are all `FES32` / `Fes32` / `fes32`.
+
+> `STM32` and `STM32F103` are trademarks of STMicroelectronics. References to them
+> in this repository are **descriptive statements of interface compatibility** only.
+> This project is an independent implementation and is not affiliated with,
+> sponsored by, or endorsed by STMicroelectronics.
+
 ### Key Features
 
 - **Open-Source CPU**: picorv32 RISC-V RV32IMC core (ISC license)
@@ -35,13 +47,13 @@ platform for multi-design chip integration via `FrameTop`.
 
 ## Architecture
 
-### Stm32Mcu — mpc-frame User Design
+### Fes32 — mpc-frame User Design
 
-The `Stm32Mcu` module wraps picorv32 + peripherals into the mpc-frame contract:
+The `Fes32` module wraps picorv32 + peripherals into the mpc-frame contract:
 
 ```
 ┌──────────────────────────────────────┐
-│            Stm32Mcu                   │
+│            Fes32                   │
 │                                       │
 │  clock  ─────────────────────────────►│
 │  reset  ─────────────────────────────►│
@@ -97,14 +109,14 @@ cd stm32-mcu
 
 ```bash
 # Compile
-iverilog -g2012 -o stm32_mcu_sim.vvp \
+iverilog -g2012 -o fes32_sim.vvp \
   /foss/picorv32/picorv32.v \
-  designs/stm32-mcu/rtl/riscv_core.v \
-  designs/stm32-mcu/rtl/Stm32Mcu.sv \
-  designs/stm32-mcu/tests/Stm32McuTb.sv
+  designs/fes32/rtl/riscv_core.v \
+  designs/fes32/rtl/Fes32.sv \
+  designs/fes32/tests/Fes32Tb.sv
 
 # Run
-vvp stm32_mcu_sim.vvp
+vvp fes32_sim.vvp
 ```
 
 ### 2. Synthesis (Yosys)
@@ -113,19 +125,19 @@ vvp stm32_mcu_sim.vvp
 yosys -s syn/synth.ys
 ```
 
-Produces `syn/stm32_mcu_synth.v` — the technology-mapped gate-level netlist.
+Produces `syn/fes32_synth.v` — the technology-mapped gate-level netlist.
 
 ### 3. mpc-frame Integration
 
 ```bash
 # Validate design manifest
 python3 ../mpc-frame/scripts/design_registry.py validate-design \
-  --design designs/stm32-mcu/design.json
+  --design designs/fes32/design.json
 
 # Build for FrameTop
 python3 ../mpc-frame/scripts/design_registry.py design-build \
-  --design designs/stm32-mcu/design.json \
-  --output-dir build/stm32-mcu \
+  --design designs/fes32/design.json \
+  --output-dir build/fes32 \
   --kind unit \
   --registry ../mpc-frame/designs/registry.json
 ```
@@ -150,7 +162,7 @@ All 10 unit tests pass using Icarus Verilog:
 ## Project Structure
 
 ```
-stm32-mcu/
+stm32-mcu/                     # repository slug (pending rename to fes32)
 ├── README.md                  # This file
 ├── .gitignore                 # Ignore build artifacts
 ├── .gitmodules                # Git submodule configuration
@@ -158,18 +170,18 @@ stm32-mcu/
 ├── LICENSE                    # Apache-2.0 license
 ├── requirements.txt           # cocotb dependencies
 ├── designs/
-│   └── stm32-mcu/            # mpc-frame design package
+│   └── fes32/            # mpc-frame design package
 │       ├── design.json        # Manifest (id=1, IO_WIDTH=66)
 │       ├── README.md          # Chinese design doc
 │       ├── README.en.md       # English design doc
 │       ├── rtl/
-│       │   ├── Stm32Mcu.sv   # Frame adapter (top)
+│       │   ├── Fes32.sv   # Frame adapter (top)
 │       │   └── riscv_core.v  # picorv32 wrapper
 │       └── tests/
-│           └── Stm32McuTb.sv # Unit testbench (10 tests)
+│           └── Fes32Tb.sv # Unit testbench (10 tests)
 ├── rtl/
 │   ├── riscv_core.v          # picorv32 wrapper (shared)
-│   └── stm32_top.v           # Legacy top-level (not used by Stm32Mcu)
+│   └── stm32_top.v           # Legacy top-level (not used by Fes32)
 ├── syn/
 │   └── synth.ys              # Yosys synthesis script
 ├── pnr/                       # Place & route config (LibreLane)

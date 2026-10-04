@@ -1,8 +1,8 @@
-# stm32-mcu 接入 mpc-frame 需求文档
+# FES32 接入 mpc-frame 需求文档
 
 ## 1. 背景
 
-`stm32-mcu` 是一个 STM32F103 兼容的 MCU 设计，搭载 picorv32 RISC-V RV32IMC 核心，
+`fes32` 是一个 STM32F103 兼容的 MCU 设计，搭载 picorv32 RISC-V RV32IMC 核心，
 包含 GPIOA、USART1、SPI1、TIM2、NVIC、Flash、SRAM 等外设。当前架构存在以下问题：
 
 - 总线协议不一致：`stm32_top.v` 使用 picorv32 原生内存接口，而 `ahb_matrix.v`、
@@ -14,7 +14,7 @@
 
 ## 2. 目标
 
-将 `stm32-mcu` 作为 mpc-frame 的 **用户设计 slot 1** 接入，使其可通过 `FrameTop`
+将 `fes32` 作为 mpc-frame 的 **用户设计 slot 1** 接入，使其可通过 `FrameTop`
 统一管理，支持多设计共存、设计选择、时钟门控、复位隔离、IO 复用。
 
 ## 3. mpc-frame 契约
@@ -120,7 +120,7 @@ module UserDesign #(
 ```
 FrameTop (mpc-frame)
 └── FrameDesignSlot1 (自动生成)
-    └── Stm32Mcu (新增: rtl/stm32_mcu_frame.sv)
+    └── Fes32 (新增: rtl/fes32_frame.sv)
         ├── picorv32 (picorv32 子模块)
         ├── riscv_core (rtl/riscv_core.v)
         ├── gpio (rtl/gpio.v)
@@ -152,11 +152,11 @@ FrameTop (mpc-frame)
 
 | 阶段 | 内容 | 优先级 | 验收条件 |
 |---|---|---|---|
-| 1 | 新建 `Stm32Mcu` 封装，绑定 GPIO/UART/SPI/SWD 到 `io_in/io_out/io_oe` | P0 | `make check DESIGN=designs/stm32-mcu` 通过 |
+| 1 | 新建 `Fes32` 封装，绑定 GPIO/UART/SPI/SWD 到 `io_in/io_out/io_oe` | P0 | `make check DESIGN=designs/fes32` 通过 |
 | 2 | 创建 `design.json` manifest | P0 | `validate-design` 通过 |
 | 3 | 实现 SPI Flash 接口（Quad I/O，7 bit） | P1 | `make frame-test TEST=frame` 通过 |
-| 4 | 编写 `Stm32McuTb.sv` 独立单元测试 | P1 | 8 个测试项全部通过 |
-| 5 | 编写 `FrameStm32McuTb.sv` FrameTop 集成测试 | P1 | contention 检测通过，无 `$fatal` |
+| 4 | 编写 `Fes32Tb.sv` 独立单元测试 | P1 | 8 个测试项全部通过 |
+| 5 | 编写 `FrameFes32Tb.sv` FrameTop 集成测试 | P1 | contention 检测通过，无 `$fatal` |
 | 6 | 实例化 `gpio.v`/`usart.v`/`spi.v`/`timer.v` 替代内联逻辑 | P2 | 功能等价，代码行数减少 30% |
 | 7 | 添加 Makefile / CI 目标 | P2 | `make frame-check` / `make frame-test` 可执行 |
 | 8 | 实现 PSRAM 接口（IO 复用方案） | P2 | 可访问 PSRAM 地址空间 |

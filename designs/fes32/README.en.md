@@ -1,4 +1,4 @@
-# stm32-mcu Frame Design
+# FES32 Frame Design
 
 Frame design wrapper for the STM32F103-compatible MCU.
 
@@ -42,9 +42,9 @@ Frame design wrapper for the STM32F103-compatible MCU.
 
 ```sh
 # Unit test
-iverilog -g2012 -o Stm32McuTb.vvp \
-  rtl/Stm32Mcu.sv rtl/*.v tests/Stm32McuTb.sv \
-  && vvp Stm32McuTb.vvp
+iverilog -g2012 -o Fes32Tb.vvp \
+  rtl/Fes32.sv rtl/*.v tests/Fes32Tb.sv \
+  && vvp Fes32Tb.vvp
 
 # FrameTop integration test
 python3 ../../../../mpc-frame/scripts/design_registry.py design-build \

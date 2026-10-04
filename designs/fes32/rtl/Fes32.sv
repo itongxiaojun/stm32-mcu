@@ -1,10 +1,10 @@
 // ========================================================================
-// Stm32Mcu Frame Design Wrapper
-// Adapts stm32-mcu to mpc-frame user design contract:
-//   clock / reset / io_in[65:0] / io_out[65:0] / io_oe[65:0]
+// FES32 Frame Design Wrapper
+// Adapts the FES32 STM32-compatible MCU to the mpc-frame user design
+// contract:  clock / reset / io_in[65:0] / io_out[65:0] / io_oe[65:0]
 // ========================================================================
 
-module Stm32Mcu #(
+module Fes32 #(
     parameter int IO_WIDTH = 66
 )(
     input  logic        clock,
