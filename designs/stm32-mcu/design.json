@@ -4,18 +4,7 @@
   "module": "Stm32Mcu",
   "sources": [
     "rtl/Stm32Mcu.sv",
-    "rtl/riscv_core.v",
-    "rtl/gpio.v",
-    "rtl/usart.v",
-    "rtl/spi.v",
-    "rtl/timer.v",
-    "rtl/nvic.v",
-    "rtl/flash_ctrl.v",
-    "rtl/sram_ctrl.v",
-    "rtl/ahb_matrix.v",
-    "rtl/ahb_apb_bridge.v",
-    "rtl/apb_bridge.v",
-    "rtl/rcc.v"
+    "rtl/riscv_core.v"
   ],
   "include_dirs": [],
   "defines": {},
