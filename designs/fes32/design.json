@@ -17,6 +17,12 @@
       "kind": "unit",
       "top": "Fes32Tb",
       "sources": ["tests/Fes32Tb.sv"]
+    },
+    {
+      "name": "frame",
+      "kind": "frame",
+      "top": "FrameFes32Tb",
+      "sources": ["tests/FrameFes32Tb.sv"]
     }
   ]
 }

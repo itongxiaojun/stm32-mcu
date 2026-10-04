@@ -75,8 +75,11 @@ module Fes32 #(
         io_oe_reg[2]   <= 1'b1;   // SPI CLK driven
         io_oe_reg[3]   <= 1'b1;   // SPI MOSI driven
         io_oe_reg[5]   <= 1'b1;   // SPI CS driven
-        io_oe_reg[23:8] <= 1'b1;  // GPIO ODR driven (excluding SWD bits 6-7)
-        io_oe_reg[39:24] <= 1'b1; // GPIO OE driven (excluding SWD bits 6-7)
+        // NOTE: the full 16-bit banks must be set. Assigning a 1-bit value to a
+        // 16-bit part-select zero-extends it, which would enable only bit 8 and
+        // bit 24 respectively.
+        io_oe_reg[23:8]  <= 16'hFFFF;  // GPIO ODR bank driven (excludes SWD bits 6-7)
+        io_oe_reg[39:24] <= 16'hFFFF;  // GPIO OE bank driven (excludes SWD bits 6-7)
         // io_oe[1] = 0 (UART RX input)
         // io_oe[4] = 0 (SPI MISO input)
         // io_oe[6] = 0 (SWD CLK input, tri-state)
