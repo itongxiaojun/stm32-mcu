@@ -137,18 +137,65 @@ module Fes32 #(
     wire sel_usart1 = mem_valid && (mem_addr >= 32'h4001_3800) && (mem_addr < 32'h4001_4000);
 
     // ----------------------------------------------------------------
-    // Flash Memory (FLASH_WORDS x 32 bits, default 256KB)
+    // Memories
+    //
+    // Two implementations, selected at compile time:
+    //   default                 - inferred arrays (simulation). Keeps the
+    //                             hierarchical memory access the testbenches
+    //                             use and the boot-vector preload.
+    //   FES32_SRAM_MACRO        - ICS55 SRAM macro instances (synthesis).
+    //
+    // Both present the same interface: one-clock registered read data, byte
+    // write enables, access gated by the chip-select term.
+    // ----------------------------------------------------------------
+    logic [31:0] flash_rdata;
+    logic [31:0] sram_rdata;
+    logic        flash_ready;
+    logic        sram_ready;
+
+    always @(posedge clock) begin
+        flash_ready <= 1'b1;
+        sram_ready  <= 1'b1;
+    end
+
+`ifdef FES32_SRAM_MACRO
+    // ----------------------------------------------------------------
+    // Macro-backed memories (synthesis only)
+    //
+    // One ics55_ecos_sram_1024x80_m4 per memory holds 2048 x 32-bit words.
+    // This branch therefore requires FLASH_WORDS <= 2048 and SRAM_WORDS <= 2048;
+    // a deeper memory needs more macros or a second wrapper.
+    // ----------------------------------------------------------------
+    Fes32Sram2048x32 u_flash (
+        .clock     (clock),
+        .word_addr (mem_addr[FLASH_AW+1:2]),
+        .en        (sel_flash),
+        .we        (sel_flash && (mem_wstrb != 4'd0)),
+        .wstrb     (mem_wstrb),
+        .wdata     (mem_wdata),
+        .rdata     (flash_rdata)
+    );
+
+    Fes32Sram2048x32 u_sram (
+        .clock     (clock),
+        .word_addr (mem_addr[SRAM_AW+1:2]),
+        .en        (sel_sram),
+        .we        (sel_sram && (mem_wstrb != 4'd0)),
+        .wstrb     (mem_wstrb),
+        .wdata     (mem_wdata),
+        .rdata     (sram_rdata)
+    );
+`else
+    // ----------------------------------------------------------------
+    // Inferred arrays (simulation)
     // ----------------------------------------------------------------
     reg [31:0] flash_mem [0:FLASH_WORDS-1];
-    reg [31:0] flash_rdata;
-    reg        flash_ready;
 
     initial begin
         flash_mem[0] = 32'hDEADBEEF;  // Boot vector
     end
 
     always @(posedge clock) begin
-        flash_ready <= 1'b1;
         if (sel_flash) begin
             if (!mem_wstrb)
                 flash_rdata <= flash_mem[mem_addr[FLASH_AW+1:2]];
@@ -157,15 +204,9 @@ module Fes32 #(
         end
     end
 
-    // ----------------------------------------------------------------
-    // SRAM Memory (SRAM_WORDS x 32 bits, default 64KB)
-    // ----------------------------------------------------------------
     reg [31:0] sram_mem [0:SRAM_WORDS-1];
-    reg [31:0] sram_rdata;
-    reg        sram_ready;
 
     always @(posedge clock) begin
-        sram_ready <= 1'b1;
         if (sel_sram) begin
             if (!mem_wstrb)
                 sram_rdata <= sram_mem[mem_addr[SRAM_AW+1:2]];
@@ -178,6 +219,7 @@ module Fes32 #(
             sram_rdata <= sram_mem[mem_addr[SRAM_AW+1:2]];
         end
     end
+`endif
 
     // ----------------------------------------------------------------
     // GPIOA Controller

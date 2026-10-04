@@ -6,6 +6,9 @@
 #   yosys/scripts/yosys_synthesis.tcl  (slang front-end -> dfflibmap -> ABC)
 # with the same ICS55 H7CL/H7CR libraries and tie cells.
 #
+# Memories are built from the ICS55 SRAM macro ics55_ecos_sram_1024x80_m4
+# (see $SRAM below), not inferred flip-flops.
+#
 # Usage:  bash syn/run_ics55_synth.sh
 # Output: syn/build/  (netlist + timing/area reports)
 # ========================================================================
@@ -14,6 +17,7 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 R2G="${R2G:-/opt/tools/r2g_synth}"
 OUT="${OUT:-$REPO/syn/build}"
+SRAM="${SRAM:-$REPO/syn/sram_macro/ics55_ecos_sram_1024x80_m4}"
 
 if [ ! -d "$R2G/lib_ics55" ]; then
     echo "error: ICS55 library directory not found: $R2G/lib_ics55" >&2
@@ -21,10 +25,21 @@ if [ ! -d "$R2G/lib_ics55" ]; then
     exit 1
 fi
 
+if [ ! -f "$SRAM/verilog/ics55_ecos_sram_1024x80_m4_stub.v" ]; then
+    echo "error: ICS55 SRAM macro not found at $SRAM" >&2
+    echo "       fetch it with:" >&2
+    echo "         mkdir -p \"\$(dirname \"$SRAM\")\" && cd \"\$(dirname \"$SRAM\")\"" >&2
+    echo "         curl -sSL -o sram.tar.gz https://github.com/openecos-projects/ics55_ecos_sram/releases/download/sram-v1-973408625b3c141338238f13f18dbc59fdcef5b4f06904011cc6955c71928d05/ics55_ecos_sram_1024x80_m4.tar.gz" >&2
+    echo "         tar xzf sram.tar.gz && rm sram.tar.gz" >&2
+    echo "       or point SRAM=/path/to/ics55_ecos_sram_1024x80_m4 at an existing copy" >&2
+    exit 1
+fi
+
 mkdir -p "$OUT"
 
 # Materialise the filelist with absolute paths for this checkout.
-sed "s|\$REPO|$REPO|g" "$REPO/syn/fes32_synth.f.in" > "$OUT/fes32_synth.f"
+sed -e "s|\$REPO|$REPO|g" -e "s|\$SRAM|$SRAM|g" \
+    "$REPO/syn/fes32_synth.f.in" > "$OUT/fes32_synth.f"
 
 export TOP_NAME="Fes32SynthTop"
 export CLK_FREQ_MHZ="${CLK_FREQ_MHZ:-100}"

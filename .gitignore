@@ -1,5 +1,6 @@
-# Build outputs
-syn/*.v
+# Build outputs (synth netlist, simulation binaries, waveforms)
+syn/*_synth.v
+syn/build/
 build/
 *.vvp
 *.vcd
@@ -7,6 +8,9 @@ build/
 
 # Generated RTL export bundle (derived from designs/ and picorv32/; regenerate on demand)
 export/
+
+# Third-party ICS55 SRAM macro (fetched on demand; see syn/run_ics55_synth.sh)
+syn/sram_macro/
 
 # OS files
 .DS_Store

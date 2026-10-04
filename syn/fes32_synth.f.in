@@ -1,8 +1,17 @@
 // RTL filelist for the FES32 ICS55 synthesis run.
+//
 // Order: leaf modules first, synthesis wrapper last.
-// Absolute paths are resolved by the run script, which rewrites this file
-// with $REPO substituted, so keep the $REPO prefix.
+// $REPO and $SRAM are substituted by syn/run_ics55_synth.sh.
+
+// Switch Fes32.sv from inferred arrays to ICS55 SRAM macro instances.
++define+FES32_SRAM_MACRO
+
 $REPO/picorv32/picorv32.v
 $REPO/designs/fes32/rtl/riscv_core.v
 $REPO/designs/fes32/rtl/Fes32.sv
+$REPO/syn/Fes32Sram2048x32.v
 $REPO/syn/Fes32SynthTop.sv
+
+// SRAM macro: the stub declares the port list so Yosys can keep the macro as
+// a blackbox and still check connectivity.
+$SRAM/verilog/ics55_ecos_sram_1024x80_m4_stub.v
