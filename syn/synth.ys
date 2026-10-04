@@ -1,5 +1,5 @@
 # ========================================================================
-# Yosys Synthesis Script for STM32-Compatible MCU
+# Yosys Synthesis Script for STM32-Compatible MCU (mpc-frame)
 # ========================================================================
 # Target: SkyWater 130nm PDK (sky130_fd_sc_hd)
 # ========================================================================
@@ -7,18 +7,18 @@
 # Read picorv32 core
 read_verilog /foss/picorv32/picorv32.v
 
-# Read peripheral modules
-read_verilog rtl/riscv_core.v
-read_verilog rtl/stm32_top.v
+# Read design sources
+read_verilog designs/stm32-mcu/rtl/riscv_core.v
+read_verilog designs/stm32-mcu/rtl/Stm32Mcu.sv
 
 # Set top module
-hierarchy -check -top stm32_top
+hierarchy -check -top Stm32Mcu
 
 # Flatten the design
 flatten
 
 # Synthesis
-synth -top stm32_top -flatten
+synth -top Stm32Mcu -flatten
 
 # Technology mapping to sky130
 dfflibmap -liberty /foss/pdks/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
@@ -32,6 +32,6 @@ opt_clean
 stat -liberty /foss/pdks/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
 
 # Write the synthesized netlist
-write_verilog -noattr -nohex syn/stm32_top_synth.v
+write_verilog -noattr -nohex syn/stm32_mcu_synth.v
 
 echo "=== Synthesis Complete ==="

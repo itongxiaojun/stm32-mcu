@@ -1,32 +1,36 @@
 # ========================================================================
-# Makefile for STM32-Compatible MCU
+# Makefile for STM32-Compatible MCU (mpc-frame)
 # ========================================================================
 
-.PHONY: all sim synth clean sim-cocotb help
+.PHONY: all sim synth clean sim-unit help
 
 # Tool paths
 IVERILOG ?= iverilog
 VVP      ?= vvp
 YOSYS    ?= yosys
-COCOTB   ?= cocotb
 PYTHON   ?= python3
 
 # Directories
-RTL      := rtl
-TB       := tb
+DESIGN   := designs/stm32-mcu
+RTL      := $(DESIGN)/rtl
+TESTS    := $(DESIGN)/tests
 SYN      := syn
 PNR      := pnr
 
-# Source files
-PICORV32 := /foss/picorv32/picorv32.v
+# Source files (mpc-frame design package)
+PICORV32 := picorv32/picorv32.v
 RISCV    := $(RTL)/riscv_core.v
-TOP      := $(RTL)/stm32_top.v
-TESTBENCH:= $(TB)/stm32_top_tb.v
+TOP      := $(RTL)/Stm32Mcu.sv
+TESTBENCH:= $(TESTS)/Stm32McuTb.sv
 
 # Output files
-SIM_VVP  := stm32_top_sim.vvp
-SYN_V    := $(SYN)/stm32_top_synth.v
-VCD      := /tmp/stm32_top_tb.vcd
+SIM_VVP  := stm32_mcu_sim.vvp
+SYN_V    := $(SYN)/stm32_mcu_synth.v
+VCD      := /tmp/Stm32McuTb.vcd
+
+# Registry (for frame build)
+MPC_FRAME := ../mpc-frame
+REGISTRY  := $(MPC_FRAME)/rtl/generated/FrameDesignRegistry.sv
 
 # ========================================================================
 # Default target
@@ -35,7 +39,7 @@ VCD      := /tmp/stm32_top_tb.vcd
 all: sim synth
 
 # ========================================================================
-# Simulation
+# Unit Simulation
 # ========================================================================
 
 sim: $(SIM_VVP)
@@ -46,12 +50,20 @@ $(SIM_VVP): $(PICORV32) $(RISCV) $(TOP) $(TESTBENCH)
 	$(IVERILOG) -g2012 -o $@ $(PICORV32) $(RISCV) $(TOP) $(TESTBENCH)
 
 # ========================================================================
-# cocotb Simulation
+# Design Registry (validate / build)
 # ========================================================================
 
-sim-cocotb:
-	@echo "=== Running cocotb tests ==="
-	cd $(TB) && $(PYTHON) -m cocotb test -module test_gpio_cocotb -top stm32_top
+validate:
+	@echo "=== Validating design manifest ==="
+	$(PYTHON) $(MPC_FRAME)/scripts/design_registry.py validate-design \
+		--design $(DESIGN)/design.json
+
+design-build:
+	@echo "=== Building design for FrameTop ==="
+	$(PYTHON) $(MPC_FRAME)/scripts/design_registry.py design-build \
+		--design $(DESIGN)/design.json \
+		--output-dir build/stm32-mcu \
+		--kind unit
 
 # ========================================================================
 # Synthesis
@@ -70,6 +82,7 @@ $(SYN_V): $(PICORV32) $(RISCV) $(TOP)
 clean:
 	rm -f $(SIM_VVP) $(VCD) $(SYN_V)
 	rm -f *.vvp *.vcd
+	rm -rf build/
 
 # ========================================================================
 # Help
@@ -78,8 +91,9 @@ clean:
 help:
 	@echo "Targets:"
 	@echo "  all         - Run simulation and synthesis"
-	@echo "  sim         - Compile and run Icarus Verilog simulation"
-	@echo "  sim-cocotb  - Run cocotb tests"
+	@echo "  sim         - Compile and run unit simulation"
+	@echo "  validate    - Validate design.json manifest"
+	@echo "  design-build - Build design for mpc-frame integration"
 	@echo "  synth       - Run Yosys synthesis"
 	@echo "  clean       - Remove build artifacts"
 	@echo "  help        - Show this help message"

@@ -6,94 +6,71 @@
 ![PDK](https://img.shields.io/badge/PDK-SkyWater%20130nm-4CC9F0)
 ![Tools](https://img.shields.io/badge/EDA-Yosys%20%7C%20LibreLane%20%7C%20Magic-green)
 
-> A fully synthesizable, verifiable, and tape-out ready STM32-compatible microcontroller
-> built entirely with open-source EDA tools inside the [IIC-OSIC-TOOLS](https://github.com/iic-jku/iic-osic-tools) container
-> from Johannes Kepler University (JKU).
+> A fully synthesizable, verifiable STM32-compatible microcontroller
+> built with open-source EDA tools inside the [IIC-OSIC-TOOLS](https://github.com/iic-jku/iic-osic-tools) container.
 > Developed using **Test-Driven Development (TDD)** methodology.
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Architecture](#architecture)
-- [Memory Map](#memory-map)
 - [Quick Start](#quick-start)
-- [Design Details](#design-details)
 - [Verification Results](#verification-results)
 - [Project Structure](#project-structure)
 - [License](#license)
-- [Contributing](#contributing)
 
 ## Overview
 
-This project implements a complete STM32F103-compatible microcontroller using only open-source
-electronic design automation (EDA) tools. The entire chip design flow — from RTL source code
-to GDS2 layout database — is executed inside the IIC-OSIC-TOOLS Docker container, which
-bundles over 40 open-source EDA tools curated by the Department for Integrated Circuits
-at Johannes Kepler University Linz.
+This project implements an STM32F103-compatible microcontroller using open-source
+EDA tools. The design targets the [mpc-frame](https://github.com/iic-jku/mpc-frame)
+platform for multi-design chip integration via `FrameTop`.
 
 ### Key Features
 
 - **Open-Source CPU**: picorv32 RISC-V RV32IMC core (ISC license)
-- **Open-Source EDA**: Yosys (synthesis), LibreLane (place & route), Magic (GDS2)
+- **Open-Source EDA**: Yosys (synthesis), LibreLane (P&R), Magic (GDS2)
 - **Open-Source PDK**: SkyWater 130nm CMOS (`sky130_fd_sc_hd`)
-- **TDD Verification**: Icarus Verilog simulation with 10/10 tests passing
-- **STM32-Compatible Memory Map**: Boot from Flash, SRAM at fixed addresses
-- **Peripheral Suite**: GPIO, UART (USART1), SPI1, Timer (TIM2), NVIC, RCC
-- **Complete RTL-to-GDS2 Flow**: Ready for tape-out backend
+- **TDD Verification**: Icarus Verilog simulation — 10/10 tests passing
+- **FrameTop Compatible**: 7-bit design ID, 66-bit payload IO interface
 
 ## Architecture
 
-### Block Diagram
+### Stm32Mcu — mpc-frame User Design
+
+The `Stm32Mcu` module wraps picorv32 + peripherals into the mpc-frame contract:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       stm32_top (Top-Level)                    │
-│                                                               │
-│  ┌──────────────┐       ┌──────────────────────────────┐     │
-│  │              │       │          AHB / APB             │     │
-│  │  picorv32    ├───────│  ┌───────────────────────┐   │     │
-│  │  RISC-V Core │       │  │  Address Decoder        │   │     │
-│  │  RV32IMC     │       │  ├─ Flash Controller       │   │     │
-│  │              │       │  │  (256KB @ 0x00000000)   │   │     │
-│  │  mem_valid ──│       │  ├─ SRAM Controller        │   │     │
-│  │  mem_addr ───│       │  │  (64KB @ 0x20000000)    │   │     │
-│  │  mem_rdata───│       │  ├─ AHB / APB Bridge       │   │     │
-│  │  irq ────────│       │  │                         │   │     │
-│  │  trap ───────│       │  ├─ GPIOA                  │   │     │
-│  └──────────────┘       │  │  (@ 0x40020000)         │   │     │
-│                          │  ├─ RCC                    │   │     │
-│                          │  │  (@ 0x40021000)         │   │     │
-│                          │  ├─ TIM2                    │   │     │
-│                          │  │  (@ 0x40000000)         │   │     │
-│                          │  ├─ SPI1                    │   │     │
-│                          │  │  (@ 0x40013000)         │   │     │
-│                          │  └─ USART1                  │   │     │
-│                          │     (@ 0x40013800)         │   │     │
-│                          └──────────────────────────────┘     │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│            Stm32Mcu                   │
+│                                       │
+│  clock  ─────────────────────────────►│
+│  reset  ─────────────────────────────►│
+│  io_in[65:0]  ◄──────────────────────│
+│  io_out[65:0] ───────────────────────►│
+│  io_oe[65:0]  ───────────────────────►│
+└──────────────────────────────────────┘
+         │ picorv32 (via riscv_core)
+         ▼
+    ┌──────────┐
+    │ picorv32 │  RV32IMC
+    └──────────┘
 ```
 
-### Peripheral List
+### IO Mapping (66-bit payload)
 
-| Peripheral | Base Address | Size | Description |
-|-----------|-------------|------|-------------|
-| Flash Controller | 0x00000000 | 256KB | Boot memory (ROM) |
-| SRAM Controller | 0x20000000 | 64KB | Data memory / stack |
-| TIM2 | 0x40000000 | 4KB | 16-bit auto-reload timer |
-| SPI1 | 0x40013000 | 4KB | SPI master (CPOL/CPHA) |
-| USART1 | 0x40013800 | 4KB | UART transmit/receive |
-| GPIOA | 0x40020000 | 4KB | 16-bit GPIO (CRL/CRH/IDR/ODR/BSRR/BRR) |
-| RCC | 0x40021000 | 4KB | Reset and clock control |
-
-## Memory Map
-
-```
-0x00000000 ├──────────────────┤ 0x00040000  │ Flash (256KB) - Boot vectors, code
-0x20000000 ├──────────────────┤ 0x20010000  │ SRAM (64KB)   - Data, heap, stack
-0x40000000 ├──────────────────┤ 0x40010000  │ APB1          - TIM2
-0x40010000 ├──────────────────┤ 0x40020000  │ APB2          - SPI1, USART1
-0x40020000 ├──────────────────┤ 0x40030000  │ AHB           - GPIOA, RCC
-```
+| Payload bit | Purpose | Direction |
+|---|---|---|
+| `[0]` | UART TX | out |
+| `[1]` | UART RX | in |
+| `[2]` | SPI SCLK | out |
+| `[3]` | SPI MOSI | out |
+| `[4]` | SPI MISO | in |
+| `[5]` | SPI CS_n | out |
+| `[6:7]` | SWD CLK/DATA | inout |
+| `[23:8]` | GPIO ODR[15:0] | out |
+| `[39:24]` | GPIO OE[15:0] | out |
+| `[54:39]` | GPIO IDR[15:0] | in |
+| `[65:55]` | Reserved | — |
 
 ## Quick Start
 
@@ -102,7 +79,6 @@ at Johannes Kepler University Linz.
 The IIC-OSIC-TOOLS container must be running. If not installed:
 
 ```bash
-# Clone and install IIC-OSIC-TOOLS
 git clone https://github.com/iic-jku/iic-osic-tools.git
 cd iic-osic-tools
 ./install.sh
@@ -117,133 +93,59 @@ git clone --recurse-submodules https://github.com/redoop/stm32-mcu.git
 cd stm32-mcu
 ```
 
-### 1. RTL Simulation (Icarus Verilog)
+### 1. Unit Simulation (Icarus Verilog)
 
 ```bash
 # Compile
-iverilog -g2012 -o stm32_top_sim.vvp \
+iverilog -g2012 -o stm32_mcu_sim.vvp \
   /foss/picorv32/picorv32.v \
-  rtl/riscv_core.v \
-  rtl/stm32_top.v \
-  tb/stm32_top_tb.v
+  designs/stm32-mcu/rtl/riscv_core.v \
+  designs/stm32-mcu/rtl/Stm32Mcu.sv \
+  designs/stm32-mcu/tests/Stm32McuTb.sv
 
 # Run
-vvp stm32_top_sim.vvp
-```
-
-**Expected output:**
-```
-=== Starting STM32 MCU Testbench ===
-Test 1: CPU Reset - PASSED
-Test 2: Flash Read - PASSED
-...
-=== All Tests PASSED! ===
+vvp stm32_mcu_sim.vvp
 ```
 
 ### 2. Synthesis (Yosys)
 
 ```bash
-# Run synthesis for SkyWater 130nm
 yosys -s syn/synth.ys
 ```
 
-This produces `syn/stm32_top_synth.v` — the technology-mapped gate-level netlist.
+Produces `syn/stm32_mcu_synth.v` — the technology-mapped gate-level netlist.
 
-### 3. Place & Route (LibreLane)
-
-```bash
-# Set the target PDK
-source sak-pdk-script.sh sky130A sky130_fd_sc_hd
-
-# Run the full RTL-to-GDS2 flow
-librelane pnr/counter.json
-```
-
-### 4. GDS2 Export (Magic)
+### 3. mpc-frame Integration
 
 ```bash
-# Open the layout in Magic
-magic pnr/stm32_top.gds &
+# Validate design manifest
+python3 ../mpc-frame/scripts/design_registry.py validate-design \
+  --design designs/stm32-mcu/design.json
+
+# Build for FrameTop
+python3 ../mpc-frame/scripts/design_registry.py design-build \
+  --design designs/stm32-mcu/design.json \
+  --output-dir build/stm32-mcu \
+  --kind unit \
+  --registry ../mpc-frame/designs/registry.json
 ```
-
-## Design Details
-
-### CPU Core: picorv32
-
-| Parameter | Value |
-|-----------|-------|
-| Architecture | RISC-V RV32IMC |
-| ISA | RV32I + M (multiplier) + C (compressed) |
-| LUTs (7-Series FPGA) | 750–2000 |
-| f_max (7-Series FPGA) | 250–450 MHz |
-| IRQ lines | 32 |
-| Pipeline | 2-stage |
-| License | ISC |
-
-### AHB / APB Bus Fabric
-
-- **AHB Crossbar**: Routes CPU memory accesses to Flash, SRAM, and peripheral bridges
-- **APB Bridge**: Translates AHB transactions to APB protocol for low-speed peripherals
-- **Address Decoder**: 7-way decoder for Flash, SRAM, TIM2, SPI1, USART1, GPIOA, RCC
-
-### GPIOA Controller
-
-- 16 pins (PA0–PA15) with configurable mode and output type
-- Registers: CRL, CRH, IDR, ODR, BSRR, BRR, LCKR
-- Modes: Input floating, Input pull-up/down, Output push-pull/open-drain (10/2/50 MHz), Analog
-
-### USART1 (UART)
-
-- Programmable baud rate (BRR register)
-- 8 data bits, 1 stop bit (configurable)
-- TX and RX pins
-- Interrupt-driven transmission (TXE, TC, RXNE flags)
-
-### SPI1
-
-- SPI master mode
-- Configurable CPOL and CPHA phases
-- Programmable baud rate divisor
-- Interrupt-driven transfer
-
-### TIM2 (Timer)
-
-- 16-bit auto-reload counter
-- Programmable prescaler
-- Update interrupt (UIF flag)
-- Configurable clock enable (CEN)
 
 ## Verification Results
 
-All 10 tests pass successfully using Icarus Verilog simulation:
+All 10 unit tests pass using Icarus Verilog:
 
 | # | Test | Description | Result |
 |---|------|-------------|--------|
-| 1 | CPU Reset | picorv32 boots from Flash 0x00000000 | ✅ PASSED |
-| 2 | Flash Read | Read from 256KB Flash memory | ✅ PASSED |
-| 3 | Flash Write | Write to Flash memory | ✅ PASSED |
-| 4 | SRAM Read | Read from 64KB SRAM | ✅ PASSED |
-| 5 | SRAM Write | Write to SRAM with byte enables | ✅ PASSED |
-| 6 | GPIO Output | 16-bit GPIO output enable and data | ✅ PASSED |
-| 7 | RCC Register | Clock control register configuration | ✅ PASSED |
-| 8 | UART TX | USART1 transmit data | ✅ PASSED |
-| 9 | SPI Interface | SPI1 master mode configuration | ✅ PASSED |
-| 10 | Timer | TIM2 counter and interrupt | ✅ PASSED |
-
-```
-=== Starting STM32 MCU Testbench ===
-Test 1: CPU Reset - PASSED
-Test 2: Flash Read - PASSED
-Test 3: SRAM Write/Read - PASSED
-Test 4: GPIO Output - PASSED
-Test 5: RCC Register Access - PASSED
-Test 6: UART TX - PASSED
-Test 7: SPI Interface - PASSED
-Test 8: Timer Counter - PASSED
-Test 9: Interrupt Routing - PASSED
-Test 10: Memory Access - PASSED
-=== All Tests PASSED! ===
-```
+| 1 | Flash Write/Read | Flash memory access | ✅ PASSED |
+| 2 | SRAM Write/Read | SRAM memory access | ✅ PASSED |
+| 3 | GPIO ODR Write | GPIO output data register | ✅ PASSED |
+| 4 | GPIO Direction | GPIO direction (CRL/CRH) | ✅ PASSED |
+| 5 | GPIO ODR Readback | GPIO readback | ✅ PASSED |
+| 6 | UART TX OE | USART1 TX output enable | ✅ PASSED |
+| 7 | SPI CLK OE | SPI1 clock output enable | ✅ PASSED |
+| 8 | SWD High-Z | SWD pins tri-state | ✅ PASSED |
+| 9 | GPIO ODR on io_out | GPIO on FrameTop IO | ✅ PASSED |
+| 10 | GPIO OE Config | GPIO OE from CRL/CRH | ✅ PASSED |
 
 ## Project Structure
 
@@ -252,30 +154,27 @@ stm32-mcu/
 ├── README.md                  # This file
 ├── .gitignore                 # Ignore build artifacts
 ├── .gitmodules                # Git submodule configuration
-├── rtl/                       # Verilog RTL source files
-│   ├── stm32_top.v            # Top-level module
-│   ├── riscv_core.v           # picorv32 RISC-V core wrapper
-│   ├── gpio.v                 # GPIOA controller
-│   ├── rcc.v                  # Reset and clock control
-│   ├── usart.v                # USART1 UART peripheral
-│   ├── spi.v                  # SPI1 peripheral
-│   ├── timer.v                # TIM2 timer peripheral
-│   ├── flash_ctrl.v           # Flash memory controller
-│   ├── sram_ctrl.v            # SRAM memory controller
-│   ├── ahb_apb_bridge.v       # AHB to APB bridge
-│   ├── ahb_matrix.v           # AHB crossbar
-│   └── apb_bridge.v           # APB bridge wrapper
-├── tb/                        # Testbenches
-│   └── stm32_top_tb.v         # Icarus Verilog testbench
-├── syn/                       # Synthesis scripts
-│   └── synth.ys               # Yosys synthesis script
-├── pnr/                       # Place & route configuration
-│   ├── counter.json           # LibreLane design configuration
-│   ├── sdc.tcl                # Synopsys Design Constraints
-│   └── pin_order.cfg          # Pin ordering configuration
+├── Makefile                   # Build targets (sim, synth, validate)
+├── LICENSE                    # Apache-2.0 license
+├── requirements.txt           # cocotb dependencies
+├── designs/
+│   └── stm32-mcu/            # mpc-frame design package
+│       ├── design.json        # Manifest (id=1, IO_WIDTH=66)
+│       ├── README.md          # Chinese design doc
+│       ├── README.en.md       # English design doc
+│       ├── rtl/
+│       │   ├── Stm32Mcu.sv   # Frame adapter (top)
+│       │   └── riscv_core.v  # picorv32 wrapper
+│       └── tests/
+│           └── Stm32McuTb.sv # Unit testbench (10 tests)
+├── rtl/
+│   ├── riscv_core.v          # picorv32 wrapper (shared)
+│   └── stm32_top.v           # Legacy top-level (not used by Stm32Mcu)
+├── syn/
+│   └── synth.ys              # Yosys synthesis script
+├── pnr/                       # Place & route config (LibreLane)
 ├── picorv32/                  # picorv32 RISC-V core (git submodule)
-├── doc/                       # Documentation
-└── tests/                     # Additional test scripts
+└── .github/workflows/ci.yml   # CI: simulation + synthesis
 ```
 
 ## Dependencies
@@ -287,52 +186,21 @@ stm32-mcu/
 | Icarus Verilog | 11.0+ | Functional simulation |
 | LibreLane | latest | Place & route |
 | Magic | 8.22+ | GDS2 layout viewer |
-| SkyWater PDK | sky130A | 130nm CMOS process design kit |
+| SkyWater PDK | sky130A | 130nm CMOS PDK |
 | IIC-OSIC-TOOLS | latest | Container with all EDA tools |
 
 ## License
 
-This project is licensed under the **Apache License 2.0**.
-See [LICENSE](LICENSE) for details.
+Apache License 2.0 — see [LICENSE](LICENSE)
 
-The **picorv32** core is licensed under the **ISC License**.
-See [picorv32/COPYING](picorv32/COPYING) for details.
-
-## Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Workflow
-
-1. Make changes to RTL files in `rtl/`
-2. Update testbenches in `tb/` if needed
-3. Run simulation: `iverilog -g2012 -o sim.vvp rtl/*.v tb/*.v && vvp sim.vvp`
-4. Run synthesis: `yosys -s syn/synth.ys`
-5. Commit and push
+picorv32 is ISC licensed — see [picorv32/COPYING](picorv32/COPYING)
 
 ## Acknowledgments
 
-- **IIC-OSIC-TOOLS** — [Johannes Kepler University, Dept. for Integrated Circuits](https://iic.jku.at)
+- **IIC-OSIC-TOOLS** — [JKU Dept. for Integrated Circuits](https://iic.jku.at)
 - **picorv32** — Clifford Wolf, OpenCores community
 - **Yosys** — Claire Xenia Wolf
 - **LibreLane / OpenROAD** — The OpenROAD Project
 - **SkyWater PDK** — SkyWater Technology / Google
 - **Icarus Verilog** — Stephen Williams
 - **Magic** — Tim Edwards
-
-## References
-
-- [IIC-OSIC-TOOLS Repository](https://github.com/iic-jku/iic-osic-tools)
-- [picorv32 — PicoRV32 RISC-V CPU](https://github.com/cliffordwolf/picorv32)
-- [LibreLane — RTL2GDS Flow](https://github.com/librelane/librelane)
-- [Yosys — Open SYnthesis Suite](https://github.com/YosysHQ/yosys)
-- [SkyWater 130nm PDK](https://github.com/google/skywater-pdk)
-- [CocoTB — Verification Library](https://github.com/cocotb/cocotb)
-- [Icarus Verilog — Verilog Simulator](https://github.com/steveicarus/iverilog)
-- [Magic — Layout Editor](https://github.com/rtimothyedwards/magic)
