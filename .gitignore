@@ -12,6 +12,12 @@ export/
 # Third-party ICS55 SRAM macro (fetched on demand; see syn/run_ics55_synth.sh)
 syn/sram_macro/
 
+# Third-party ICS55 PDK: standard cells, IO, tech LEF (see syn/fetch_ics55_pdk.sh)
+syn/pdk/
+
+# Physical implementation outputs
+syn/pnr/
+
 # OS files
 .DS_Store
 Thumbs.db

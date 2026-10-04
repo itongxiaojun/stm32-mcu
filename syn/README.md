@@ -124,6 +124,40 @@ the memory interface; all 100 K memory flops are gone. Total area drops 7.6×.
 
 `syn/build/` and `syn/sram_macro/` are git-ignored — regenerate with the script.
 
+## PDK: standard cells, IO and tech LEF
+
+Synthesis only needs Liberty, which the vendor flow already carries in
+`$R2G/lib_ics55/`. A physical flow additionally needs LEF, which comes from the
+PDK release:
+
+```sh
+bash syn/fetch_ics55_pdk.sh          # -> syn/pdk/icsprout55-pdk-v1.10.102/extracted
+```
+
+`fetch_ics55_pdk.sh` uses `gh-proxy.com` first and falls back to direct
+github.com. That matters here: cloning the PDK repository fails with
+`fetch-pack: unexpected disconnect / early EOF`, and direct release downloads
+stall at a measured ~4 KB/s with SSL `unexpected eof` drops, against ~950 KB/s
+through the mirror.
+
+Release `v1.10.102` provides:
+
+| Item | Path (under `extracted/`) |
+|---|---|
+| Tech LEF | `icsprout55-pdk-1.10.102/prtech/techLEF/N551P6M.lef` |
+| Std-cell LEF | `icsprout55-pdk-1.10.102/IP/STD_cell/ics55_LLSC_H7C_V1p10C100/ics55_LLSC_{H7CL,H7CR,H7CH}/lef/*.lef` |
+| IO LEF | `icsprout55-pdk-1.10.102/IP/IO/ICsprout_55LLULP1233_IO_251013/lef/ICSIOA_N55_3P3_1P6M1TM.lef` |
+| Liberty | `liberty/`, 3 cell families x 7 corners |
+| GDS | `gds/` |
+
+The SRAM macro's LEF comes from the separate macro package (see above), not from
+the PDK.
+
+> The PDK's `ics55_LLSC_H7CL_ss_rcworst_1p08_125_nldm.lib` differs from the copy
+> in `$R2G/lib_ics55/` by 10 lines only: the release adds
+> `clock_gating_integrated_cell` attributes for the ICG cells. Cell count (747)
+> and all timing/area data are identical, so synthesis results are unaffected.
+
 ## Note on the netlist
 
 The netlist top is `Fes32SynthTop`, which carries the 2048-word memory
