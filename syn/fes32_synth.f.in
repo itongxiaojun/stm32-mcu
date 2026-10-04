@@ -1,0 +1,8 @@
+// RTL filelist for the FES32 ICS55 synthesis run.
+// Order: leaf modules first, synthesis wrapper last.
+// Absolute paths are resolved by the run script, which rewrites this file
+// with $REPO substituted, so keep the $REPO prefix.
+$REPO/picorv32/picorv32.v
+$REPO/designs/fes32/rtl/riscv_core.v
+$REPO/designs/fes32/rtl/Fes32.sv
+$REPO/syn/Fes32SynthTop.sv

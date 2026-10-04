@@ -5,7 +5,14 @@
 // ========================================================================
 
 module Fes32 #(
-    parameter int IO_WIDTH = 66
+    parameter int IO_WIDTH = 66,
+    // Memory sizes. The ASIC flow has no SRAM macro library available, so the
+    // memories are inferred as flip-flops: every word costs 32 flops. The
+    // defaults below are the full STM32F103 sizes (256KB flash / 64KB SRAM)
+    // used for simulation; a synthesis build must override them to stay within
+    // a realisable cell count (see syn/Fes32SynthTop.sv).
+    parameter int FLASH_WORDS = 65536,   // 256KB @ 32-bit words
+    parameter int SRAM_WORDS  = 16384    // 64KB  @ 32-bit words
 )(
     input  logic        clock,
     input  logic        reset,
@@ -13,6 +20,10 @@ module Fes32 #(
     output wire [65:0] io_out,
     output wire [65:0] io_oe
 );
+
+    // Word-address widths derived from the sizes above.
+    localparam int FLASH_AW = $clog2(FLASH_WORDS);
+    localparam int SRAM_AW  = $clog2(SRAM_WORDS);
 
     // ----------------------------------------------------------------
     // Internal signals
@@ -44,9 +55,9 @@ module Fes32 #(
     reg [31:0] gpio_bsrr;
     reg [31:0] gpio_brr;
 
-    reg [15:0] gpio_pad_o;
-    reg [15:0] gpio_pad_oe;
-    reg [15:0] gpio_idr_reg;
+    logic [15:0] gpio_pad_o;
+    logic [15:0] gpio_pad_oe;
+    reg   [15:0] gpio_idr_reg;
 
     // ----------------------------------------------------------------
     // IO bindings
@@ -126,9 +137,9 @@ module Fes32 #(
     wire sel_usart1 = mem_valid && (mem_addr >= 32'h4001_3800) && (mem_addr < 32'h4001_4000);
 
     // ----------------------------------------------------------------
-    // Flash Memory (256KB = 65536 x 32 bits)
+    // Flash Memory (FLASH_WORDS x 32 bits, default 256KB)
     // ----------------------------------------------------------------
-    reg [31:0] flash_mem [0:65535];
+    reg [31:0] flash_mem [0:FLASH_WORDS-1];
     reg [31:0] flash_rdata;
     reg        flash_ready;
 
@@ -139,32 +150,32 @@ module Fes32 #(
     always @(posedge clock) begin
         flash_ready <= 1'b1;
         if (sel_flash) begin
-            if (!mem_wstrb && mem_addr[22:2] < 65536)
-                flash_rdata <= flash_mem[mem_addr[22:2]];
-            if (mem_wstrb != 4'd0 && mem_addr[22:2] < 65536)
-                flash_mem[mem_addr[22:2]] <= mem_wdata;
+            if (!mem_wstrb)
+                flash_rdata <= flash_mem[mem_addr[FLASH_AW+1:2]];
+            if (mem_wstrb != 4'd0)
+                flash_mem[mem_addr[FLASH_AW+1:2]] <= mem_wdata;
         end
     end
 
     // ----------------------------------------------------------------
-    // SRAM Memory (64KB = 16384 x 32 bits)
+    // SRAM Memory (SRAM_WORDS x 32 bits, default 64KB)
     // ----------------------------------------------------------------
-    reg [31:0] sram_mem [0:16383];
+    reg [31:0] sram_mem [0:SRAM_WORDS-1];
     reg [31:0] sram_rdata;
     reg        sram_ready;
 
     always @(posedge clock) begin
         sram_ready <= 1'b1;
         if (sel_sram) begin
-            if (!mem_wstrb && mem_addr[21:2] < 16384)
-                sram_rdata <= sram_mem[mem_addr[21:2]];
-            if (mem_wstrb != 4'd0 && mem_addr[21:2] < 16384) begin
-                if (mem_wstrb[0]) sram_mem[mem_addr[21:2]][7:0]   <= mem_wdata[7:0];
-                if (mem_wstrb[1]) sram_mem[mem_addr[21:2]][15:8]  <= mem_wdata[15:8];
-                if (mem_wstrb[2]) sram_mem[mem_addr[21:2]][23:16] <= mem_wdata[23:16];
-                if (mem_wstrb[3]) sram_mem[mem_addr[21:2]][31:24] <= mem_wdata[31:24];
+            if (!mem_wstrb)
+                sram_rdata <= sram_mem[mem_addr[SRAM_AW+1:2]];
+            if (mem_wstrb != 4'd0) begin
+                if (mem_wstrb[0]) sram_mem[mem_addr[SRAM_AW+1:2]][7:0]   <= mem_wdata[7:0];
+                if (mem_wstrb[1]) sram_mem[mem_addr[SRAM_AW+1:2]][15:8]  <= mem_wdata[15:8];
+                if (mem_wstrb[2]) sram_mem[mem_addr[SRAM_AW+1:2]][23:16] <= mem_wdata[23:16];
+                if (mem_wstrb[3]) sram_mem[mem_addr[SRAM_AW+1:2]][31:24] <= mem_wdata[31:24];
             end
-            sram_rdata <= sram_mem[mem_addr[21:2]];
+            sram_rdata <= sram_mem[mem_addr[SRAM_AW+1:2]];
         end
     end
 
@@ -179,8 +190,6 @@ module Fes32 #(
             gpio_odr   <= 32'h0000_0000;
             gpio_bsrr  <= 32'h0000_0000;
             gpio_brr   <= 32'h0000_0000;
-            gpio_pad_o <= 16'd0;
-            gpio_pad_oe <= 16'd0;
             gpio_idr_reg <= 16'd0;
             gpio_reset <= 1'b1;
         end else begin
@@ -204,32 +213,38 @@ module Fes32 #(
                     end
                 endcase
             end
+        end
+    end
 
-            // Update pad outputs based on configuration
-            for (integer i = 0; i < 8; i = i + 1) begin
-                case (gpio_crl[i*4 +: 4])
-                    4'd1, 4'd2, 4'd3: begin
-                        gpio_pad_oe[i] = 1'b1;
-                        gpio_pad_o[i]  = gpio_odr[i];
-                    end
-                    default: begin
-                        gpio_pad_oe[i] = 1'b0;
-                        gpio_pad_o[i]  = 1'b0;
-                    end
-                endcase
-            end
-            for (integer i = 8; i < 16; i = i + 1) begin
-                case (gpio_crh[(i-8)*4 +: 4])
-                    4'd1, 4'd2, 4'd3: begin
-                        gpio_pad_oe[i] = 1'b1;
-                        gpio_pad_o[i]  = gpio_odr[i];
-                    end
-                    default: begin
-                        gpio_pad_oe[i] = 1'b0;
-                        gpio_pad_o[i]  = 1'b0;
-                    end
-                endcase
-            end
+    // Pad output data and enable are pure functions of the configuration
+    // registers (CRL/CRH select the mode, ODR supplies the data), so they are
+    // derived combinationally rather than registered. Keeping them out of the
+    // clocked block also avoids mixing blocking and non-blocking assignments,
+    // which a strict SystemVerilog front-end (slang) rejects.
+    always_comb begin
+        for (int i = 0; i < 8; i++) begin
+            case (gpio_crl[i*4 +: 4])
+                4'd1, 4'd2, 4'd3: begin
+                    gpio_pad_oe[i] = 1'b1;
+                    gpio_pad_o[i]  = gpio_odr[i];
+                end
+                default: begin
+                    gpio_pad_oe[i] = 1'b0;
+                    gpio_pad_o[i]  = 1'b0;
+                end
+            endcase
+        end
+        for (int i = 8; i < 16; i++) begin
+            case (gpio_crh[(i-8)*4 +: 4])
+                4'd1, 4'd2, 4'd3: begin
+                    gpio_pad_oe[i] = 1'b1;
+                    gpio_pad_o[i]  = gpio_odr[i];
+                end
+                default: begin
+                    gpio_pad_oe[i] = 1'b0;
+                    gpio_pad_o[i]  = 1'b0;
+                end
+            endcase
         end
     end
 
@@ -243,6 +258,9 @@ module Fes32 #(
                           sel_sram  ? sram_ready :
                           sel_gpio  ? 1'b1 : 1'b0;
 
-    assign trap = 1'b0;
+    // NOTE: `trap` is driven by riscv_core's trap output and is currently
+    // unused here. It must NOT also be assigned a constant - doing so created
+    // a second driver on the wire, which Yosys reported as
+    // "Output port ... trap ... is connected to constants: 1'0".
 
 endmodule
