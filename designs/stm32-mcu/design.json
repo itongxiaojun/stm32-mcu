@@ -1,0 +1,33 @@
+{
+  "name": "stm32-mcu",
+  "id": 1,
+  "module": "Stm32Mcu",
+  "sources": [
+    "rtl/Stm32Mcu.sv",
+    "rtl/riscv_core.v",
+    "rtl/gpio.v",
+    "rtl/usart.v",
+    "rtl/spi.v",
+    "rtl/timer.v",
+    "rtl/nvic.v",
+    "rtl/flash_ctrl.v",
+    "rtl/sram_ctrl.v",
+    "rtl/ahb_matrix.v",
+    "rtl/ahb_apb_bridge.v",
+    "rtl/apb_bridge.v",
+    "rtl/rcc.v"
+  ],
+  "include_dirs": [],
+  "defines": {},
+  "parameters": {
+    "IO_WIDTH": 66
+  },
+  "tests": [
+    {
+      "name": "io",
+      "kind": "unit",
+      "top": "Stm32McuTb",
+      "sources": ["tests/Stm32McuTb.sv"]
+    }
+  ]
+}
